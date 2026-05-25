@@ -1,14 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: {
+    params: Promise<{ id: string }>;
+  }
 ) {
 
   try {
 
-    const reservationId = Number(params.id);
+    const { id } = await context.params;
+
+    const reservationId = Number(id);
 
     const reservation =
       await prisma.reservation.findUnique({
@@ -53,6 +57,8 @@ export async function POST(
     });
 
   } catch (error) {
+
+    console.error(error);
 
     return NextResponse.json(
       { error: "Release failed" },
