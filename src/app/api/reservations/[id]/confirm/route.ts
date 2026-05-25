@@ -1,14 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: {
+    params: Promise<{ id: string }>;
+  }
 ) {
 
   try {
 
-    const reservationId = Number(params.id);
+    const { id } = await context.params;
+
+    const reservationId = Number(id);
 
     const reservation =
       await prisma.reservation.findUnique({
@@ -17,7 +21,6 @@ export async function POST(
         },
       });
 
-    // Reservation missing
     if (!reservation) {
 
       return NextResponse.json(
@@ -26,7 +29,6 @@ export async function POST(
       );
     }
 
-    // Reservation expired
     if (new Date() > reservation.expiresAt) {
 
       return NextResponse.json(
@@ -35,10 +37,8 @@ export async function POST(
       );
     }
 
-    // Transaction
     await prisma.$transaction(async (tx) => {
 
-      // Permanently reduce stock
       await tx.inventory.update({
         where: {
           id: reservation.inventoryId,
@@ -53,7 +53,6 @@ export async function POST(
         },
       });
 
-      // Update reservation status
       await tx.reservation.update({
         where: {
           id: reservation.id,
